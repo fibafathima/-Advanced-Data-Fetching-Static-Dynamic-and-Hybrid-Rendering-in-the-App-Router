@@ -5,16 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:dev": "cp .env.development .env.local && next build",
-    "build:staging": "cp .env.staging .env.local && next build",
-    "build:production": "cp .env.production .env.local && next build",
     "start": "next start",
-    "lint": "eslint",
-    "env:dev": "cp .env.development .env.local",
-    "env:staging": "cp .env.staging .env.local",
-    "env:production": "cp .env.production .env.local",
-    "env:example": "cp .env.example .env.local",
-    "env:clean": "rm -f .env.local"
+    "lint": "eslint"
   },
   "dependencies": {
     "next": "16.1.4",

@@ -1,0 +1,188 @@
+name: Multi-Environment Deployment
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  # Development Environment Deployment
+  deploy-dev:
+    if: github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    environment: development
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Setup environment variables
+        run: cp .env.development .env.local
+      
+      - name: Build application
+        run: npm run build:dev
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.DEV_API_URL }}
+          NEXT_PUBLIC_APP_URL: ${{ secrets.DEV_APP_URL }}
+          DATABASE_URL: ${{ secrets.DEV_DATABASE_URL }}
+          AUTH_SECRET: ${{ secrets.DEV_AUTH_SECRET }}
+          NEXT_PUBLIC_ANALYTICS_ID: ${{ secrets.DEV_ANALYTICS_ID }}
+          NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.DEV_SENTRY_DSN }}
+      
+      - name: Run tests
+        run: npm run lint
+      
+      - name: Deploy to Development
+        run: |
+          echo "Deploying to development environment..."
+          # Add your deployment commands here
+          # e.g., deploy to Vercel, AWS, or other hosting platform
+
+  # Staging Environment Deployment
+  deploy-staging:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Setup environment variables
+        run: cp .env.staging .env.local
+      
+      - name: Build application
+        run: npm run build:staging
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.STAGING_API_URL }}
+          NEXT_PUBLIC_APP_URL: ${{ secrets.STAGING_APP_URL }}
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+          AUTH_SECRET: ${{ secrets.STAGING_AUTH_SECRET }}
+          NEXT_PUBLIC_ANALYTICS_ID: ${{ secrets.STAGING_ANALYTICS_ID }}
+          NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.STAGING_SENTRY_DSN }}
+      
+      - name: Run tests
+        run: npm run lint
+      
+      - name: Deploy to Staging
+        run: |
+          echo "Deploying to staging environment..."
+          # Add your deployment commands here
+          # e.g., deploy to Vercel, AWS, or other hosting platform
+
+  # Production Environment Deployment
+  deploy-production:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Setup environment variables
+        run: cp .env.production .env.local
+      
+      - name: Build application
+        run: npm run build:production
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.PROD_API_URL }}
+          NEXT_PUBLIC_APP_URL: ${{ secrets.PROD_APP_URL }}
+          DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+          AUTH_SECRET: ${{ secrets.PROD_AUTH_SECRET }}
+          NEXT_PUBLIC_ANALYTICS_ID: ${{ secrets.PROD_ANALYTICS_ID }}
+          NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.PROD_SENTRY_DSN }}
+      
+      - name: Run tests
+        run: npm run lint
+      
+      - name: Deploy to Production
+        run: |
+          echo "Deploying to production environment..."
+          # Add your deployment commands here
+          # e.g., deploy to Vercel, AWS, or other hosting platform
+
+  # Manual Deployment Workflow
+  manual-deploy:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Setup environment variables
+        run: |
+          case ${{ github.event.inputs.environment }} in
+            "development")
+              cp .env.development .env.local
+              ;;
+            "staging")
+              cp .env.staging .env.local
+              ;;
+            "production")
+              cp .env.production .env.local
+              ;;
+          esac
+      
+      - name: Build application
+        run: |
+          case ${{ github.event.inputs.environment }} in
+            "development")
+              npm run build:dev
+              ;;
+            "staging")
+              npm run build:staging
+              ;;
+            "production")
+              npm run build:production
+              ;;
+          esac
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.DEV_API_URL }}
+          NEXT_PUBLIC_APP_URL: ${{ secrets.DEV_APP_URL }}
+          DATABASE_URL: ${{ secrets.DEV_DATABASE_URL }}
+          AUTH_SECRET: ${{ secrets.DEV_AUTH_SECRET }}
+          NEXT_PUBLIC_ANALYTICS_ID: ${{ secrets.DEV_ANALYTICS_ID }}
+          NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.DEV_SENTRY_DSN }}
+      
+      - name: Run tests
+        run: npm run lint
+      
+      - name: Deploy
+        run: |
+          echo "Deploying to ${{ github.event.inputs.environment }} environment..."
+          # Add your deployment commands here

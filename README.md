@@ -1,6 +1,18 @@
 # Next.js Rendering Strategies Demo
 
-This project demonstrates the three main rendering strategies available in Next.js: Static Site Generation (SSG), Server-Side Rendering (SSR), and Hybrid Rendering with Incremental Static Regeneration (ISR).
+This project demonstrates the three main rendering strategies available in Next.js: Static Site Generation (SSG), Server-Side Rendering (SSR), and Hybrid Rendering with Incremental Static Regeneration (ISR). It also includes a comprehensive multi-environment deployment setup for development, staging, and production environments.
+
+## Multi-Environment Deployment Setup
+
+This project implements a robust multi-environment deployment strategy with:
+
+- **Separate environment configuration files** for development, staging, and production
+- **Secure secret management** using GitHub Secrets
+- **Environment-specific build scripts** for consistent deployments
+- **Automated CI/CD pipeline** with GitHub Actions
+- **Configuration validation** and type-safe environment variable access
+
+For detailed information about the multi-environment setup, see [Environment Setup Documentation](./docs/environment-setup.md).
 
 ## Rendering Strategies Implemented
 
