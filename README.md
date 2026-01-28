@@ -393,6 +393,163 @@ The video walkthrough demonstrates:
 - Specific examples from our app showing the differences between SSG, SSR, and ISR
 - How the DailyEdge case study solution would be implemented in practice
 
+## Assignment: Environment-Aware Builds & Secrets Management
+
+### Why Environment Segregation is Essential in Modern Deployments
+
+Environment segregation (development, staging, production) is fundamental to modern software deployment for several critical reasons:
+
+**1. Risk Mitigation**
+- **Isolation of Changes**: Each environment serves as a safety net, preventing accidental changes from propagating to production
+- **Testing Validation**: Staging environments allow comprehensive testing before production deployment
+- **Rollback Capability**: Issues can be identified and fixed in lower environments without affecting users
+
+**2. Configuration Management**
+- **Environment-Specific Settings**: Different environments require different configurations (API endpoints, database connections, feature flags)
+- **Security Isolation**: Sensitive production credentials are never exposed in development or staging
+- **Performance Tuning**: Each environment can be optimized independently (caching strategies, logging levels)
+
+**3. CI/CD Reliability**
+- **Consistent Deployments**: Automated pipelines can reliably deploy to specific environments with known configurations
+- **Parallel Development**: Teams can work simultaneously without interfering with each other's environments
+- **Automated Testing**: Integration tests can run against staging environments that mirror production
+
+### How Secure Secret Management Improves CI/CD Safety and Reliability
+
+**1. Security Enhancement**
+- **No Hardcoded Secrets**: Using GitHub Secrets, AWS Parameter Store, or Azure Key Vault eliminates the risk of committing sensitive data
+- **Access Control**: Secrets can be managed with fine-grained permissions and audit trails
+- **Rotation Capability**: Secrets can be rotated without code changes, just configuration updates
+
+**2. Operational Reliability**
+- **Consistent Configuration**: Secrets are injected consistently across all deployment environments
+- **Error Prevention**: Automated validation prevents deployments with missing or incorrect credentials
+- **Compliance**: Meets security requirements for handling sensitive data in enterprise environments
+
+**3. Developer Experience**
+- **Simplified Onboarding**: New developers don't need to manage complex credential distribution
+- **Environment Parity**: All environments use the same secret management approach
+- **Reduced Human Error**: Automation reduces the likelihood of misconfigured credentials
+
+## Case Study Analysis: "The Staging Secret That Broke Production"
+
+### What Went Wrong
+
+In the ShopLite scenario, the critical failure was **environment configuration bleed** - staging database credentials were accidentally used in production. This represents a classic failure in environment segregation and secret management:
+
+**Root Causes**:
+1. **Manual Configuration**: Relying on manual environment variable setup instead of automated, validated processes
+2. **Lack of Isolation**: No clear separation between staging and production configurations
+3. **Inadequate Validation**: No automated checks to verify environment-specific credentials during deployment
+4. **Poor Secret Management**: Hardcoded or manually managed secrets that could be easily confused
+
+### How Proper Environment Configuration Could Have Prevented This
+
+**1. Separate Environment Files**
+Our project demonstrates the correct approach with distinct configuration files:
+
+```bash
+.env.development    # Development-specific settings
+.env.staging       # Staging-specific settings  
+.env.production    # Production-specific settings
+.env.example       # Template for developers
+```
+
+Each file contains environment-specific variables that cannot be accidentally swapped:
+- **Development**: `DATABASE_URL=postgresql://dev_user:dev_password@localhost:5432/app_dev`
+- **Staging**: `DATABASE_URL=postgresql://staging_user:staging_password@staging-db.domain.com:5432/app_staging`
+- **Production**: `DATABASE_URL=postgresql://prod_user:prod_password@prod-db.domain.com:5432/app_prod`
+
+**2. Automated Build Scripts**
+Our environment-aware build scripts ensure the correct configuration is always used:
+
+```bash
+npm run build:dev        # Uses .env.development
+npm run build:staging    # Uses .env.staging  
+npm run build:production # Uses .env.production
+```
+
+**3. GitHub Secrets Integration**
+For sensitive credentials, we use GitHub Secrets with environment-specific prefixes:
+
+```yaml
+# In GitHub Actions workflow
+env:
+  DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}  # Production only
+  API_KEY: ${{ secrets.PROD_API_KEY }}            # Production only
+```
+
+### How Our Project Handles Environment-Specific Builds
+
+**1. Configuration Validation**
+Our `src/lib/config.ts` file provides type-safe access to environment variables with validation:
+
+```typescript
+export const config = {
+  // API Configuration - different per environment
+  apiUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api',
+  appUrl: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+  
+  // Feature Flags - environment-specific behavior
+  enableDebug: process.env.NEXT_PUBLIC_ENABLE_DEBUG === 'true',
+  enableMockData: process.env.NEXT_PUBLIC_ENABLE_MOCK_DATA === 'true',
+  
+  // Environment Detection
+  isDevelopment: process.env.NODE_ENV === 'development',
+  isStaging: process.env.NEXT_PUBLIC_APP_URL?.includes('staging'),
+  isProduction: process.env.NODE_ENV === 'production',
+};
+
+// Validate required environment variables
+export const validateEnvironment = () => {
+  const required = [];
+  if (!config.apiUrl) required.push('NEXT_PUBLIC_API_URL');
+  if (!config.appUrl) required.push('NEXT_PUBLIC_APP_URL');
+  
+  if (required.length > 0) {
+    console.error('Missing required environment variables:', required);
+    if (config.isProduction) {
+      throw new Error(`Missing required environment variables: ${required.join(', ')}`);
+    }
+  }
+};
+```
+
+**2. Build Verification**
+We can verify each environment points to the correct endpoints:
+
+```bash
+# Development build verification
+npm run build:dev
+# Confirms: NEXT_PUBLIC_API_URL=http://localhost:3000/api
+
+# Staging build verification  
+npm run build:staging
+# Confirms: NEXT_PUBLIC_API_URL=https://staging-api.rendering-demo.com/api
+
+# Production build verification
+npm run build:production
+# Confirms: NEXT_PUBLIC_API_URL=https://api.rendering-demo.com/api
+```
+
+**3. Secret Security**
+Our approach ensures no sensitive data is exposed:
+
+- **.gitignore**: Excludes all `.env.*` files except `.env.example`
+- **GitHub Secrets**: Real credentials stored securely in GitHub
+- **Configuration Logging**: Sensitive values are hidden in logs and outputs
+- **Environment Validation**: Checks for missing required variables without exposing values
+
+### Key Lessons from the Case Study
+
+1. **Never Trust Manual Processes**: Automated, validated deployments prevent human error
+2. **Environment Isolation is Critical**: Clear separation prevents configuration bleed
+3. **Secrets Must be Managed Securely**: Never commit real credentials to repositories
+4. **Validation is Essential**: Automated checks catch configuration issues before deployment
+5. **Documentation Matters**: Clear processes and responsibilities prevent confusion
+
+The ShopLite incident demonstrates why professional deployment practices - like those implemented in this project - are essential for maintaining system reliability and user trust.
+
 ## Summary
 
 This project successfully demonstrates:
@@ -400,15 +557,21 @@ This project successfully demonstrates:
 1. **Static Site Generation (SSG)**: Implemented with `revalidate = false` for truly static content
 2. **Server-Side Rendering (SSR)**: Implemented with `dynamic = 'force-dynamic'` for fresh content on each request
 3. **Incremental Static Regeneration (ISR)**: Implemented with `revalidate = 30` for periodic content updates
+4. **Multi-Environment Deployment**: Robust setup with separate configurations for dev, staging, and production
+5. **Secure Secret Management**: GitHub Secrets integration with environment-specific security
+6. **Automated CI/CD**: GitHub Actions workflows with proper environment isolation
 
 Each approach has been documented with:
 - Clear configuration examples
 - Use cases and trade-offs
 - Performance implications
 - Scaling considerations
+- Security best practices
 
 The project structure includes:
 - `/static` - Static rendering example
 - `/dynamic` - Dynamic rendering example
 - `/hybrid` - Hybrid rendering example
 - Comprehensive documentation in this README
+- Environment-specific configuration files
+- Secure secret management implementation
